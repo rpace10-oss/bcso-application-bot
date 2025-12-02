@@ -250,9 +250,21 @@ client.on(Events.InteractionCreate, async (interaction) => {
       typeId
     });
 
-    await dm.send(
-      `You selected **${type.label}**.\n\nI will ask you **${questions.length}** questions. Please answer each one in a single message.\n\nType \`cancel\` at any time to cancel.`
-    );
+    // Intro embed in DM
+    const introEmbed = new EmbedBuilder()
+      .setTitle(`${type.label}`)
+      .setDescription(
+        [
+          `I will ask you **${questions.length}** questions.`,
+          '',
+          'Please answer each one in a single message.',
+          '',
+          'Type `cancel` at any time to cancel your application.'
+        ].join('\n')
+      )
+      .setColor(0x5865F2);
+
+    await dm.send({ embeds: [introEmbed] });
 
     await askNextQuestion(userId);
 
@@ -270,7 +282,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 });
 
-// ====== DM QUESTION FLOW ======
+// ====== DM QUESTION FLOW (NOW USING EMBEDS) ======
 async function askNextQuestion(userId) {
   const app = activeApplications.get(userId);
   if (!app) return;
@@ -285,7 +297,13 @@ async function askNextQuestion(userId) {
 
   const question = questions[app.currentIndex];
   const dm = await user.createDM();
-  await dm.send(question);
+
+  const questionEmbed = new EmbedBuilder()
+    .setTitle(`Question ${app.currentIndex + 1} of ${questions.length}`)
+    .setDescription(question)
+    .setColor(0x2B2D31);
+
+  await dm.send({ embeds: [questionEmbed] });
 }
 
 client.on(Events.MessageCreate, async (message) => {
@@ -375,6 +393,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   const reviewer = interaction.member;
 
+  // must be some reviewer role
   if (!memberIsReviewer(reviewer)) {
     return interaction.reply({
       content: 'You do not have permission to review applications.',
@@ -382,7 +401,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     });
   }
 
-  const parts = interaction.customId.split('|');
+  const parts = interaction.customId.split('|'); // ['review','accept', typeId, userId]
   const action = parts[1];
   const typeId = parts[2];
   const targetUserId = parts[3];
@@ -399,6 +418,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   const type = APPLICATION_TYPES.find((t) => t.id === typeId);
 
+  // per-type reviewer restriction (applies to both accept & deny)
   if (!canReviewType(reviewer, typeId)) {
     return interaction.reply({
       content: 'You do not have permission to review this type of application.',
@@ -407,20 +427,32 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (action === 'accept') {
+    // give the appropriate role
     if (type && type.roleId) {
       await targetMember.roles.add(type.roleId).catch(console.error);
     }
 
+    // Turn the embed green and show a summary like your example
     const oldEmbed = interaction.message.embeds[0];
-    const updatedEmbed = EmbedBuilder.from(oldEmbed).setFooter({
-      text: `Accepted by ${reviewer.user.tag}`
-    });
+
+    const approvedEmbed = EmbedBuilder.from(oldEmbed)
+      .setTitle('Application Approved')
+      .setColor(0x2ECC71) // green
+      .setDescription(
+        [
+          `User: ${targetMember.user.tag} (${targetMember.id})`,
+          `Application: ${type ? type.label : 'Unknown Application'}`,
+          `Approved By: ${reviewer.user.tag} (${reviewer.user.id})`
+        ].join('\n')
+      )
+      .setFooter({ text: `Accepted by ${reviewer.user.tag}` });
 
     await interaction.update({
-      embeds: [updatedEmbed],
+      embeds: [approvedEmbed],
       components: []
     });
 
+    // DM user
     try {
       await targetMember.send(
         `✅ Your **${type ? type.label : 'application'}** in **${guild.name}** has been accepted!`
@@ -430,15 +462,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
   } else if (action === 'deny') {
     const oldEmbed = interaction.message.embeds[0];
-    const updatedEmbed = EmbedBuilder.from(oldEmbed).setFooter({
-      text: `Denied by ${reviewer.user.tag}`
-    });
+    const deniedEmbed = EmbedBuilder.from(oldEmbed)
+      .setTitle('Application Denied')
+      .setColor(0xED4245) // red
+      .setFooter({ text: `Denied by ${reviewer.user.tag}` });
 
     await interaction.update({
-      embeds: [updatedEmbed],
+      embeds: [deniedEmbed],
       components: []
     });
 
+    // DM user
     try {
       await targetMember.send(
         `❌ Your **${type ? type.label : 'application'}** in **${guild.name}** has been denied.`
