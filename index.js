@@ -427,15 +427,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (action === 'accept') {
-    // give the appropriate role
+    // Give the appropriate role
     if (type && type.roleId) {
       await targetMember.roles.add(type.roleId).catch(console.error);
     }
 
-    // Turn the embed green and show a summary like your example
-    const oldEmbed = interaction.message.embeds[0];
-
-    const approvedEmbed = EmbedBuilder.from(oldEmbed)
+    // Clean summary embed: Application Approved
+    const approvedEmbed = new EmbedBuilder()
       .setTitle('Application Approved')
       .setColor(0x2ECC71) // green
       .setDescription(
@@ -445,7 +443,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
           `Approved By: ${reviewer.user.tag} (${reviewer.user.id})`
         ].join('\n')
       )
-      .setFooter({ text: `Accepted by ${reviewer.user.tag}` });
+      .setFooter({ text: `Accepted by ${reviewer.user.tag}` })
+      .setTimestamp();
 
     await interaction.update({
       embeds: [approvedEmbed],
@@ -461,11 +460,19 @@ client.on(Events.InteractionCreate, async (interaction) => {
       console.error('Could not DM user about acceptance:', e);
     }
   } else if (action === 'deny') {
-    const oldEmbed = interaction.message.embeds[0];
-    const deniedEmbed = EmbedBuilder.from(oldEmbed)
+    // Clean summary embed: Application Denied
+    const deniedEmbed = new EmbedBuilder()
       .setTitle('Application Denied')
       .setColor(0xED4245) // red
-      .setFooter({ text: `Denied by ${reviewer.user.tag}` });
+      .setDescription(
+        [
+          `User: ${targetMember.user.tag} (${targetMember.id})`,
+          `Application: ${type ? type.label : 'Unknown Application'}`,
+          `Denied By: ${reviewer.user.tag} (${reviewer.user.id})`
+        ].join('\n')
+      )
+      .setFooter({ text: `Denied by ${reviewer.user.tag}` })
+      .setTimestamp();
 
     await interaction.update({
       embeds: [deniedEmbed],
