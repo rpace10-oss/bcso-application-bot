@@ -38,45 +38,43 @@ const client = new Client({
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent
   ],
-  partials: [Partials.Channel] // needed so DMs work
+  partials: [Partials.Channel]
 });
 
 // ====== CONFIG WITH YOUR IDS ======
 
-// Log channel where applications are sent
 const LOG_CHANNEL_ID = '1443657155587604625';
 
 // Command / reviewer roles
 const DEPUTY_CMD_ROLE_ID = '1443657150068162795';
-const TEU_CMD_ROLE_ID    = '1443657149669707884';
-const FTO_CMD_ROLE_ID    = '1443657150068162796';
+const TEU_CMD_ROLE_ID = '1443657149669707884';
+const FTO_CMD_ROLE_ID = '1443657150068162796';
 
-// Roles allowed to post panel / generally be "review staff"
 const REVIEWER_ROLE_IDS = [
   DEPUTY_CMD_ROLE_ID,
   TEU_CMD_ROLE_ID,
   FTO_CMD_ROLE_ID
 ];
 
-// Application types shown in the dropdown
+// Application types
 const APPLICATION_TYPES = [
   {
     id: 'bcso_deputy',
     label: 'BCSO Deputy Application',
     description: 'Apply to become a Blaine County Sheriff\'s Office Deputy.',
-    roleId: '1443657149967499436' // Deputy Role
+    roleId: '1443657149967499436'
   },
   {
     id: 'fto',
     label: 'FTO Application',
     description: 'Apply to become a Field Training Officer.',
-    roleId: '1443657150043000874' // FTO Role
+    roleId: '1443657150043000874'
   },
   {
     id: 'teu',
     label: 'Traffic Enforcement Unit Application',
     description: 'Apply to join the Traffic Enforcement Unit.',
-    roleId: '1443657149669707881' // TEU Role
+    roleId: '1443657149669707881'
   }
 ];
 
@@ -91,35 +89,32 @@ const QUESTIONS_BY_TYPE = {
     '6️⃣ Do you have a working microphone and are you comfortable speaking in voice channels?',
     '7️⃣ Is there anything else we should know about you as a Deputy applicant?'
   ],
-
   fto: [
     '1️⃣ What is your age?',
     '2️⃣ What is your time zone?',
-    '3️⃣ How long have you been a BCSO Deputy in this community (and others, if applicable)?',
+    '3️⃣ How long have you been a BCSO Deputy?',
     '4️⃣ Why do you want to become an FTO?',
-    '5️⃣ What qualities do you think make a good trainer / mentor?',
-    '6️⃣ Describe a time you had to correct or coach someone. How did you handle it?',
-    '7️⃣ How would you handle a trainee who is not listening to feedback or following SOPs?',
-    '8️⃣ Is there anything else we should know about you as an FTO applicant?'
+    '5️⃣ What qualities make a good trainer?',
+    '6️⃣ Describe a time you had to coach someone.',
+    '7️⃣ How do you handle a trainee not following SOPs?',
+    '8️⃣ Anything else we should know?'
   ],
-
   teu: [
     '1️⃣ What is your age?',
     '2️⃣ What is your time zone?',
-    '3️⃣ Why do you want to join the Traffic Enforcement Unit?',
-    '4️⃣ What experience do you have with traffic stops, speed enforcement, and highway patrol RP?',
-    '5️⃣ How familiar are you with traffic laws / vehicle code in RP (1–10) and why?',
-    '6️⃣ How would you handle a high-speed pursuit as a TEU unit?',
-    '7️⃣ Is there anything else we should know about you as a TEU applicant?'
+    '3️⃣ Why do you want to join TEU?',
+    '4️⃣ Experience with traffic enforcement?',
+    '5️⃣ Rate your traffic law knowledge (1–10)',
+    '6️⃣ How do you handle high-speed pursuits?',
+    '7️⃣ Anything else we should know?'
   ]
 };
 
-// Helper to get the question list for a type
 function getQuestionsForType(typeId) {
   return QUESTIONS_BY_TYPE[typeId] || [];
 }
 
-// activeApplications[userId] = { answers, currentIndex, guildId, typeId }
+// Active apps
 const activeApplications = new Map();
 
 // ====== READY ======
@@ -127,43 +122,29 @@ client.once(Events.ClientReady, () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
-// Helper: does member have any reviewer role?
+// Role helpers
 function memberIsReviewer(member) {
-  if (!member || !member.roles) return false;
-  return REVIEWER_ROLE_IDS.some((id) => member.roles.cache.has(id));
+  return member && member.roles && REVIEWER_ROLE_IDS.some(id => member.roles.cache.has(id));
 }
 
-// Helper: can this member review (accept/deny) this specific type?
 function canReviewType(member, typeId) {
-  if (!member || !member.roles) return false;
-
-  // Deputy cmd can review ALL application types
+  if (!member) return false;
   if (member.roles.cache.has(DEPUTY_CMD_ROLE_ID)) return true;
-
-  // FTO cmd can only review FTO apps
   if (typeId === 'fto' && member.roles.cache.has(FTO_CMD_ROLE_ID)) return true;
-
-  // TEU cmd can only review TEU apps
   if (typeId === 'teu' && member.roles.cache.has(TEU_CMD_ROLE_ID)) return true;
-
-  // No one except Deputy cmd can review Deputy apps
-  if (typeId === 'bcso_deputy') {
-    return member.roles.cache.has(DEPUTY_CMD_ROLE_ID);
-  }
-
+  if (typeId === 'bcso_deputy') return member.roles.cache.has(DEPUTHY_CMD_ROLE_ID);
   return false;
 }
 
-// ====== /post-app-panel COMMAND ======
+/* ============================================================
+   /post-app-panel COMMAND
+   ============================================================ */
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'post-app-panel') {
     if (!memberIsReviewer(interaction.member)) {
-      return interaction.reply({
-        content: 'You do not have permission to post the application panel.',
-        ephemeral: true
-      });
+      return interaction.reply({ content: 'No permission.', ephemeral: true });
     }
 
     const embed = new EmbedBuilder()
@@ -174,10 +155,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
           '',
           '**Available Applications:**',
           '• BCSO Deputy',
-          '• Field Training Officer (FTO)',
-          '• Traffic Enforcement Unit (TEU)',
+          '• FTO',
+          '• TEU',
           '',
-          'Once selected, the bot will DM you a series of questions.'
+          'You will receive DMs with the questions.'
         ].join('\n')
       )
       .setTimestamp();
@@ -185,57 +166,36 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const selectMenu = new StringSelectMenuBuilder()
       .setCustomId('app_select')
       .setPlaceholder('Select an application type...')
-      .addOptions(
-        APPLICATION_TYPES.map((t) => ({
-          label: t.label,
-          description: t.description,
-          value: t.id
-        }))
-      );
+      .addOptions(APPLICATION_TYPES.map(t => ({
+        label: t.label,
+        description: t.description,
+        value: t.id
+      })));
 
     const row = new ActionRowBuilder().addComponents(selectMenu);
 
-    await interaction.reply({
-      content: 'BCSO application panel posted.',
-      ephemeral: true
-    });
-
-    await interaction.channel.send({
-      embeds: [embed],
-      components: [row]
-    });
+    await interaction.reply({ content: 'Posted panel.', ephemeral: true });
+    await interaction.channel.send({ embeds: [embed], components: [row] });
   }
 });
 
-// ====== DROPDOWN SELECTION HANDLER ======
+/* ============================================================
+   DROPDOWN HANDLER
+   ============================================================ */
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isStringSelectMenu()) return;
   if (interaction.customId !== 'app_select') return;
 
   const typeId = interaction.values[0];
-  const type = APPLICATION_TYPES.find((t) => t.id === typeId);
-
-  if (!type) {
-    return interaction.reply({
-      content: 'Invalid application type selected.',
-      ephemeral: true
-    });
-  }
+  const type = APPLICATION_TYPES.find(t => t.id === typeId);
+  if (!type) return interaction.reply({ content: 'Invalid type.', ephemeral: true });
 
   const questions = getQuestionsForType(typeId);
-  if (!questions.length) {
-    return interaction.reply({
-      content: 'This application type has no questions configured.',
-      ephemeral: true
-    });
-  }
-
   const userId = interaction.user.id;
 
   if (activeApplications.has(userId)) {
     return interaction.reply({
-      content:
-        'You already have an application in progress in DMs. Please finish it or type `cancel` in DM to cancel.',
+      content: 'You already have an application in progress.',
       ephemeral: true
     });
   }
@@ -250,39 +210,32 @@ client.on(Events.InteractionCreate, async (interaction) => {
       typeId
     });
 
-    // Intro embed in DM
-    const introEmbed = new EmbedBuilder()
+    const intro = new EmbedBuilder()
       .setTitle(`${type.label}`)
       .setDescription(
         [
-          `I will ask you **${questions.length}** questions.`,
-          '',
-          'Please answer each one in a single message.',
-          '',
-          'Type `cancel` at any time to cancel your application.'
+          `I will ask **${questions.length}** questions.`,
+          'Answer each in one message.',
+          'Type `cancel` to stop.'
         ].join('\n')
       )
       .setColor(0x5865F2);
 
-    await dm.send({ embeds: [introEmbed] });
-
+    await dm.send({ embeds: [intro] });
     await askNextQuestion(userId);
 
-    await interaction.reply({
-      content: 'I sent you a DM with the application questions.',
-      ephemeral: true
-    });
-  } catch (err) {
-    console.error(err);
+    await interaction.reply({ content: 'Check your DMs.', ephemeral: true });
+  } catch {
     return interaction.reply({
-      content:
-        'I could not DM you. Please enable DMs from server members and try again.',
+      content: 'Could not DM you. Enable DMs.',
       ephemeral: true
     });
   }
 });
 
-// ====== DM QUESTION FLOW (NOW USING EMBEDS) ======
+/* ============================================================
+   DM QUESTION FLOW
+   ============================================================ */
 async function askNextQuestion(userId) {
   const app = activeApplications.get(userId);
   if (!app) return;
@@ -290,204 +243,204 @@ async function askNextQuestion(userId) {
   const questions = getQuestionsForType(app.typeId);
   const user = await client.users.fetch(userId);
 
-  if (app.currentIndex >= questions.length) {
-    await finalizeApplication(userId);
-    return;
-  }
+  if (app.currentIndex >= questions.length) return finalizeApplication(userId);
 
   const question = questions[app.currentIndex];
-  const dm = await user.createDM();
 
-  const questionEmbed = new EmbedBuilder()
-    .setTitle(`Question ${app.currentIndex + 1} of ${questions.length}`)
+  const embed = new EmbedBuilder()
+    .setTitle(`Question ${app.currentIndex + 1}`)
     .setDescription(question)
     .setColor(0x2B2D31);
 
-  await dm.send({ embeds: [questionEmbed] });
+  await user.send({ embeds: [embed] });
 }
 
-client.on(Events.MessageCreate, async (message) => {
-  if (message.author.bot) return;
-  if (message.guild) return;
+client.on(Events.MessageCreate, async message => {
+  if (message.author.bot || message.guild) return;
 
   const userId = message.author.id;
   if (!activeApplications.has(userId)) return;
 
   const app = activeApplications.get(userId);
-  const content = message.content.trim();
+  const questionSet = getQuestionsForType(app.typeId);
 
-  if (content.toLowerCase() === 'cancel') {
+  if (message.content.toLowerCase() === 'cancel') {
     activeApplications.delete(userId);
-    return message.channel.send('Your application has been cancelled.');
+    return message.channel.send('Application cancelled.');
   }
 
-  app.answers.push(content);
+  app.answers.push(message.content.trim());
   app.currentIndex++;
-  activeApplications.set(userId, app);
 
-  const questions = getQuestionsForType(app.typeId);
-
-  if (app.currentIndex >= questions.length) {
-    await message.channel.send(
-      'Thank you! Your application has been submitted for review.'
-    );
-    await finalizeApplication(userId);
-  } else {
-    await askNextQuestion(userId);
+  if (app.currentIndex >= questionSet.length) {
+    await message.channel.send('Your application has been submitted.');
+    return finalizeApplication(userId);
   }
+
+  await askNextQuestion(userId);
 });
 
-// ====== FINALIZE & SEND TO LOG CHANNEL ======
+/* ============================================================
+   SEND APPLICATION TO LOGS
+   ============================================================ */
 async function finalizeApplication(userId) {
   const app = activeApplications.get(userId);
-  if (!app) return;
+  activeApplications.delete(userId);
 
-  const type = APPLICATION_TYPES.find((t) => t.id === app.typeId);
-  const typeLabel = type ? type.label : 'Unknown Application Type';
-
+  const type = APPLICATION_TYPES.find(t => t.id === app.typeId);
   const questions = getQuestionsForType(app.typeId);
 
-  const user = await client.users.fetch(userId);
   const guild = await client.guilds.fetch(app.guildId);
   const member = await guild.members.fetch(userId).catch(() => null);
-  const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
+  const user = await client.users.fetch(userId);
+  const channel = await client.channels.fetch(LOG_CHANNEL_ID);
 
-  const fields = questions.map((q, index) => ({
+  const fields = questions.map((q, i) => ({
     name: q,
-    value: app.answers[index] || '*No answer*'
+    value: app.answers[i] || '*No answer*'
   }));
 
   const embed = new EmbedBuilder()
     .setTitle('New BCSO Application')
     .setDescription(
-      `Type: **${typeLabel}**\nApplicant: ${
+      `Type: **${type.label}**\nApplicant: ${
         member ? member.toString() : user.tag
-      }\nID: ${user.id}`
+      }`
     )
     .addFields(fields)
     .setTimestamp();
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`review|accept|${app.typeId}|${user.id}`)
+      .setCustomId(`review|accept|${type.id}|${userId}`)
       .setLabel('Accept')
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
-      .setCustomId(`review|deny|${app.typeId}|${user.id}`)
+      .setCustomId(`review|deny|${type.id}|${userId}`)
       .setLabel('Deny')
       .setStyle(ButtonStyle.Danger)
   );
 
-  await logChannel.send({ embeds: [embed], components: [row] });
-
-  activeApplications.delete(userId);
+  await channel.send({ embeds: [embed], components: [row] });
 }
 
-// ====== REVIEW BUTTONS: ACCEPT / DENY ======
-client.on(Events.InteractionCreate, async (interaction) => {
+/* ============================================================
+   ACCEPT / DENY HANDLER
+   ============================================================ */
+client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isButton()) return;
+  if (!interaction.customId.startsWith('review|')) return;
 
-  if (!interaction.customId.startsWith('review|')) {
-    return;
-  }
-
+  const [_, action, typeId, targetUserId] = interaction.customId.split('|');
   const reviewer = interaction.member;
 
-  // must be some reviewer role
   if (!memberIsReviewer(reviewer)) {
-    return interaction.reply({
-      content: 'You do not have permission to review applications.',
-      ephemeral: true
-    });
+    return interaction.reply({ content: 'No permission.', ephemeral: true });
   }
-
-  const parts = interaction.customId.split('|'); // ['review','accept', typeId, userId]
-  const action = parts[1];
-  const typeId = parts[2];
-  const targetUserId = parts[3];
-
-  const guild = interaction.guild;
-  const targetMember = await guild.members.fetch(targetUserId).catch(() => null);
-
-  if (!targetMember) {
-    return interaction.reply({
-      content: 'User is no longer in the server.',
-      ephemeral: true
-    });
-  }
-
-  const type = APPLICATION_TYPES.find((t) => t.id === typeId);
-
-  // per-type reviewer restriction (applies to both accept & deny)
   if (!canReviewType(reviewer, typeId)) {
     return interaction.reply({
-      content: 'You do not have permission to review this type of application.',
+      content: 'You cannot review this application type.',
       ephemeral: true
     });
   }
 
-  if (action === 'accept') {
-    // Give the appropriate role
-    if (type && type.roleId) {
-      await targetMember.roles.add(type.roleId).catch(console.error);
-    }
+  const guild = interaction.guild;
+  const type = APPLICATION_TYPES.find(t => t.id === typeId);
+  const targetMember = await guild.members
+    .fetch(targetUserId)
+    .catch(() => null);
 
-    // Clean summary embed: Application Approved
-    const approvedEmbed = new EmbedBuilder()
+  if (!targetMember)
+    return interaction.reply({
+      content: 'User no longer in server.',
+      ephemeral: true
+    });
+
+  if (action === 'accept') {
+    if (type.roleId) await targetMember.roles.add(type.roleId).catch(console.error);
+
+    const embed = new EmbedBuilder()
       .setTitle('Application Approved')
-      .setColor(0x2ECC71) // green
+      .setColor(0x2ECC71)
       .setDescription(
         [
           `User: ${targetMember.user.tag} (${targetMember.id})`,
-          `Application: ${type ? type.label : 'Unknown Application'}`,
+          `Application: ${type.label}`,
           `Approved By: ${reviewer.user.tag} (${reviewer.user.id})`
         ].join('\n')
       )
       .setFooter({ text: `Accepted by ${reviewer.user.tag}` })
       .setTimestamp();
 
-    await interaction.update({
-      embeds: [approvedEmbed],
-      components: []
-    });
+    await interaction.update({ embeds: [embed], components: [] });
 
-    // DM user
     try {
       await targetMember.send(
-        `✅ Your **${type ? type.label : 'application'}** in **${guild.name}** has been accepted!`
+        `✅ Your **${type.label}** application was approved!`
       );
-    } catch (e) {
-      console.error('Could not DM user about acceptance:', e);
-    }
+    } catch {}
   } else if (action === 'deny') {
-    // Clean summary embed: Application Denied
-    const deniedEmbed = new EmbedBuilder()
+    const embed = new EmbedBuilder()
       .setTitle('Application Denied')
-      .setColor(0xED4245) // red
+      .setColor(0xED4245)
       .setDescription(
         [
           `User: ${targetMember.user.tag} (${targetMember.id})`,
-          `Application: ${type ? type.label : 'Unknown Application'}`,
+          `Application: ${type.label}`,
           `Denied By: ${reviewer.user.tag} (${reviewer.user.id})`
         ].join('\n')
       )
       .setFooter({ text: `Denied by ${reviewer.user.tag}` })
       .setTimestamp();
 
-    await interaction.update({
-      embeds: [deniedEmbed],
-      components: []
-    });
+    await interaction.update({ embeds: [embed], components: [] });
 
-    // DM user
     try {
       await targetMember.send(
-        `❌ Your **${type ? type.label : 'application'}** in **${guild.name}** has been denied.`
+        `❌ Your **${type.label}** application was denied.`
       );
-    } catch (e) {
-      console.error('Could not DM user about denial:', e);
-    }
+    } catch {}
   }
 });
 
+/* ============================================================
+   /purge COMMAND HANDLER
+   ============================================================ */
+client.on(Events.InteractionCreate, async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+  if (interaction.commandName !== 'purge') return;
+
+  const amount = interaction.options.getInteger('amount');
+
+  if (!interaction.member.permissions.has('ManageMessages')) {
+    return interaction.reply({
+      content: '❌ You do not have permission to use /purge.',
+      ephemeral: true
+    });
+  }
+
+  if (amount < 1 || amount > 100) {
+    return interaction.reply({
+      content: '❌ Enter a number between 1 and 100.',
+      ephemeral: true
+    });
+  }
+
+  await interaction.deferReply({ ephemeral: true });
+
+  try {
+    const deleted = await interaction.channel.bulkDelete(amount, true);
+
+    await interaction.editReply(
+      `🧹 Deleted **${deleted.size}** messages.`
+    );
+  } catch (e) {
+    console.error(e);
+    await interaction.editReply('❌ Unable to delete messages here.');
+  }
+});
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
 client.login(process.env.DISCORD_TOKEN);
