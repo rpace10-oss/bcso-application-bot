@@ -11,6 +11,25 @@ import {
   Events
 } from 'discord.js';
 
+/* ============================================================
+   UPTIME ROBOT / RENDER KEEPALIVE HTTP SERVER
+   ============================================================ */
+import express from 'express';
+
+const keepAlive = express();
+keepAlive.get('/', (req, res) => {
+  res.status(200).send('BCSO Application Bot is alive!');
+});
+
+const port = process.env.PORT || 3000;
+keepAlive.listen(port, () => {
+  console.log(`Keepalive server is running on port ${port}`);
+});
+
+/* ============================================================
+   DISCORD BOT SETUP
+   ============================================================ */
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -140,7 +159,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'post-app-panel') {
-    // Only people with a reviewer role can post the panel
     if (!memberIsReviewer(interaction.member)) {
       return interaction.reply({
         content: 'You do not have permission to post the application panel.',
@@ -272,7 +290,7 @@ async function askNextQuestion(userId) {
 
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot) return;
-  if (message.guild) return; // only DMs
+  if (message.guild) return;
 
   const userId = message.author.id;
   if (!activeApplications.has(userId)) return;
@@ -351,14 +369,12 @@ async function finalizeApplication(userId) {
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isButton()) return;
 
-  // Buttons now have format: review|accept|typeId|userId
   if (!interaction.customId.startsWith('review|')) {
     return;
   }
 
   const reviewer = interaction.member;
 
-  // Must at least be one of the reviewer roles to touch the buttons at all
   if (!memberIsReviewer(reviewer)) {
     return interaction.reply({
       content: 'You do not have permission to review applications.',
@@ -366,10 +382,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
     });
   }
 
-  const parts = interaction.customId.split('|'); // ['review','accept', typeId, userId]
-  const action = parts[1];        // 'accept' or 'deny'
-  const typeId = parts[2];        // e.g. 'bcso_deputy'
-  const targetUserId = parts[3];  // actual Discord user ID
+  const parts = interaction.customId.split('|');
+  const action = parts[1];
+  const typeId = parts[2];
+  const targetUserId = parts[3];
 
   const guild = interaction.guild;
   const targetMember = await guild.members.fetch(targetUserId).catch(() => null);
@@ -383,7 +399,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   const type = APPLICATION_TYPES.find((t) => t.id === typeId);
 
-  // Per-type review restriction: applies to both accept & deny
   if (!canReviewType(reviewer, typeId)) {
     return interaction.reply({
       content: 'You do not have permission to review this type of application.',
@@ -392,7 +407,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (action === 'accept') {
-    // Give the appropriate role
     if (type && type.roleId) {
       await targetMember.roles.add(type.roleId).catch(console.error);
     }
@@ -407,7 +421,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       components: []
     });
 
-    // DM user
     try {
       await targetMember.send(
         `✅ Your **${type ? type.label : 'application'}** in **${guild.name}** has been accepted!`
@@ -426,7 +439,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       components: []
     });
 
-    // DM user
     try {
       await targetMember.send(
         `❌ Your **${type ? type.label : 'application'}** in **${guild.name}** has been denied.`
