@@ -56,6 +56,13 @@ const REVIEWER_ROLE_IDS = [
   FTO_CMD_ROLE_ID
 ];
 
+// Branding images for BCSO panel
+const BCSO_BADGE_URL =
+  'https://cdn.discordapp.com/attachments/1443657151150166039/1445120501411483771/Normal2.png?ex=692f30d8&is=692ddf58&hm=d3cdaa544514afefe73eed18b48167d51cba0221fb1e9a1b58efc94bbd80c511';
+
+const BCSO_BANNER_URL =
+  'https://blazesmods.com/cdn/shop/files/PATROL13.png?v=1721824805&width=1100';
+
 // Application types
 const APPLICATION_TYPES = [
   {
@@ -132,7 +139,7 @@ function canReviewType(member, typeId) {
   if (member.roles.cache.has(DEPUTY_CMD_ROLE_ID)) return true;
   if (typeId === 'fto' && member.roles.cache.has(FTO_CMD_ROLE_ID)) return true;
   if (typeId === 'teu' && member.roles.cache.has(TEU_CMD_ROLE_ID)) return true;
-  if (typeId === 'bcso_deputy') return member.roles.cache.has(DEPUTHY_CMD_ROLE_ID);
+  if (typeId === 'bcso_deputy') return member.roles.cache.has(DEPUTY_CMD_ROLE_ID);
   return false;
 }
 
@@ -148,19 +155,30 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
     const embed = new EmbedBuilder()
+      .setColor(0x2b2d31)
+      .setAuthor({
+        name: "Blaine County Sheriff's Office",
+        iconURL: BCSO_BADGE_URL
+      })
       .setTitle('BCSO Application Center')
       .setDescription(
         [
-          'Use the dropdown below to start an application.',
+          'Use the dropdown below to start your **application**.',
           '',
-          '**Available Applications:**',
-          '• BCSO Deputy',
-          '• FTO',
-          '• TEU',
+          '📌 **How it works:**',
+          '• Choose the application type from the menu below.',
+          '• I will DM you a series of questions.',
+          '• Your answers will be sent to BCSO Command for review.',
           '',
-          'You will receive DMs with the questions.'
+          '📝 **Available Applications:**',
+          '• 👮 **BCSO Deputy** – Patrol, respond to calls, enforce the law.',
+          '• 🎓 **Field Training Officer (FTO)** – Train and evaluate new Deputies.',
+          '• 🚓 **Traffic Enforcement Unit (TEU)** – Focused traffic & speed enforcement.'
         ].join('\n')
       )
+      .setThumbnail(BCSO_BADGE_URL)
+      .setImage(BCSO_BANNER_URL)
+      .setFooter({ text: "Blaine County Sheriff's Office • Serve & Protect" })
       .setTimestamp();
 
     const selectMenu = new StringSelectMenuBuilder()
