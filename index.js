@@ -18,7 +18,7 @@ import express from 'express';
 
 const keepAlive = express();
 keepAlive.get('/', (req, res) => {
-  res.status(200).send('BCSO Application Bot is alive!');
+  res.status(200).send('SASO Application Bot is alive!');
 });
 
 const port = process.env.PORT || 3000;
@@ -56,7 +56,7 @@ const REVIEWER_ROLE_IDS = [
   FTO_CMD_ROLE_ID
 ];
 
-// Branding images for BCSO panel
+// Branding images for SASO panel
 const BCSO_BADGE_URL =
   'https://cdn.discordapp.com/attachments/1443657155831009359/1445780848484941904/Adobe_Express_-_file_1.png?ex=693197d7&is=69304657&hm=2e1e408ae6d524d444fcdaf2d1ab5f065047c75b7374e1bf27f872ee8bf41c5d&';
 
@@ -66,9 +66,9 @@ const BCSO_BANNER_URL =
 // Application types
 const APPLICATION_TYPES = [
   {
-    id: 'bcso_deputy',
-    label: 'BCSO Deputy Application',
-    description: 'Apply to become a Blaine County Sheriff\'s Office Deputy.',
+    id: 'saso_deputy',
+    label: 'SASO Deputy Application',
+    description: 'Apply to become a San Andreas Sheriff\'s Office Deputy.',
     roleId: '1443657149967499436'
   },
   {
@@ -87,19 +87,19 @@ const APPLICATION_TYPES = [
 
 // ====== QUESTIONS PER APPLICATION TYPE ======
 const QUESTIONS_BY_TYPE = {
-  bcso_deputy: [
+  saso_deputy: [
     '1️⃣ What is your age?',
     '2️⃣ What is your time zone?',
-    '3️⃣ Why do you want to become a BCSO Deputy?',
+    '3️⃣ Why do you want to become a SASO Deputy?',
     '4️⃣ What prior law enforcement / RP experience do you have?',
-    '5️⃣ On average, how many hours per week can you dedicate to BCSO?',
+    '5️⃣ On average, how many hours per week can you dedicate to SASO?',
     '6️⃣ Do you have a working microphone and are you comfortable speaking in voice channels?',
     '7️⃣ Is there anything else we should know about you as a Deputy applicant?'
   ],
   fto: [
     '1️⃣ What is your age?',
     '2️⃣ What is your time zone?',
-    '3️⃣ How long have you been a BCSO Deputy?',
+    '3️⃣ How long have you been a SASO Deputy?',
     '4️⃣ Why do you want to become an FTO?',
     '5️⃣ What qualities make a good trainer?',
     '6️⃣ Describe a time you had to coach someone.',
@@ -144,7 +144,7 @@ function canReviewType(member, typeId) {
   if (member.roles.cache.has(DEPUTY_CMD_ROLE_ID)) return true;
   if (typeId === 'fto' && member.roles.cache.has(FTO_CMD_ROLE_ID)) return true;
   if (typeId === 'teu' && member.roles.cache.has(TEU_CMD_ROLE_ID)) return true;
-  if (typeId === 'bcso_deputy') return member.roles.cache.has(DEPUTY_CMD_ROLE_ID);
+  if (typeId === 'saso_deputy') return member.roles.cache.has(DEPUTY_CMD_ROLE_ID);
   return false;
 }
 
@@ -162,10 +162,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const embed = new EmbedBuilder()
       .setColor(0x2b2d31)
       .setAuthor({
-        name: "Blaine County Sheriff's Office",
+        name: "San Andreas Sheriff's Office",
         iconURL: BCSO_BADGE_URL
       })
-      .setTitle('BCSO Application Center')
+      .setTitle('SASO Application Center')
       .setDescription(
         [
           'Use the dropdown below to start your **application**.',
@@ -173,17 +173,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
           '📌 **How it works:**',
           '• Choose the application type from the menu below.',
           '• I will DM you a series of questions.',
-          '• Your answers will be sent to BCSO Command for review.',
+          '• Your answers will be sent to SASO Command for review.',
           '',
           '📝 **Available Applications:**',
-          '• 👮 **BCSO Deputy** – Patrol, respond to calls, enforce the law.',
+          '• 👮 **SASO Deputy** – Patrol, respond to calls, enforce the law.',
           '• 🎓 **Field Training Officer (FTO)** – Train and evaluate new Deputies.',
           '• 🚓 **Traffic Enforcement Unit (TEU)** – Focused traffic & speed enforcement.'
         ].join('\n')
       )
       .setThumbnail(BCSO_BADGE_URL)
       .setImage(BCSO_BANNER_URL)
-      .setFooter({ text: "Blaine County Sheriff's Office • Serve & Protect" })
+      .setFooter({ text: "San Andreas Sheriff's Office • Serve & Protect" })
       .setTimestamp();
 
     const selectMenu = new StringSelectMenuBuilder()
@@ -332,7 +332,7 @@ async function finalizeApplication(userId) {
   }));
 
   const embed = new EmbedBuilder()
-    .setTitle('New BCSO Application')
+    .setTitle('New SASO Application')
     .setDescription(
       `Type: **${type.label}**\nApplicant: ${
         member ? member.toString() : user.tag
