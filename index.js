@@ -129,6 +129,11 @@ client.once(Events.ClientReady, () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
+// ====== GLOBAL ERROR HANDLER (stops Unknown interaction from crashing) ======
+client.on('error', (error) => {
+  console.error('Discord client error:', error);
+});
+
 // Role helpers
 function memberIsReviewer(member) {
   return member && member.roles && REVIEWER_ROLE_IDS.some(id => member.roles.cache.has(id));
@@ -192,7 +197,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     const row = new ActionRowBuilder().addComponents(selectMenu);
 
-    await interaction.reply({ content: 'Posted panel.', ephemeral: true });
+    // catch "Unknown interaction" instead of crashing
+    try {
+      await interaction.reply({ content: 'Posted panel.', ephemeral: true });
+    } catch (err) {
+      if (err.code !== 10062) {
+        console.error('Error replying to /post-app-panel:', err);
+      }
+    }
+
     await interaction.channel.send({ embeds: [embed], components: [row] });
   }
 });
