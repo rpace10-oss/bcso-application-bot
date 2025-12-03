@@ -58,7 +58,7 @@ const REVIEWER_ROLE_IDS = [
 
 // Branding images for BCSO panel
 const BCSO_BADGE_URL =
-  'https://https://cdn.discordapp.com/attachments/1443657155831009359/1445780848484941904/Adobe_Express_-_file_1.png?ex=693197d7&is=69304657&hm=2e1e408ae6d524d444fcdaf2d1ab5f065047c75b7374e1bf27f872ee8bf41c5d&';
+  'https://cdn.discordapp.com/attachments/1443657155831009359/1445780848484941904/Adobe_Express_-_file_1.png?ex=693197d7&is=69304657&hm=2e1e408ae6d524d444fcdaf2d1ab5f065047c75b7374e1bf27f872ee8bf41c5d&';
 
 const BCSO_BANNER_URL =
   'https://recklemodifications.com/cdn/shop/files/FiveM_b3407_GTAProcess_2025-10-05_14-37-55.png?v=1759722741&width=713';
